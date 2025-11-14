@@ -1,0 +1,15 @@
+[project]
+name = "multi-agent-harness"
+version = "0.0.1"
+description = "Experimental multi-role LLM test harness with pluggable providers and tools"
+authors = [{ name = "Scott McGuire" }]
+requires-python = ">=3.10"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+Homepage = "https://github.com/abstractionlair/multi-agent-harness"
+
