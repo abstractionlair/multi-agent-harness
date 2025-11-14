@@ -203,37 +203,39 @@ docs/
   - Contributing guidelines
   - Custom orchestrators and tool executors
 
-### Phase 5: Testing & Infrastructure ⚠️ (Partially Complete)
+### Phase 5: Testing & Infrastructure ✅ (Complete)
 
 **Completed:**
 
 - [x] Create .gitignore (comprehensive, 55 lines)
 - [x] Verification scripts (verify_phase2.py, verify_phase3.py)
-
-**Missing:**
-
-- [ ] Add dependencies to pyproject.toml:
-  ```toml
-  dependencies = [
-    "openai>=1.0.0",
-    # Optional deps for other providers
-  ]
-  [project.optional-dependencies]
-  anthropic = ["anthropic>=0.18.0"]
-  google = ["google-generativeai>=0.3.0"]
-  dev = ["pytest>=7.0", "mypy>=1.0", "black", "ruff"]
-  ```
-
-- [ ] Add mypy.ini with strict type checking
-- [ ] Write unit tests:
-  - Adapter payload conversion (no network)
-  - TurnRunner logic
-  - ConversationRunner state management
-  - Tool loop behavior
-
-- [ ] Write integration tests (with recorded responses)
-- [ ] Add GitHub Actions CI
-- [ ] Add pre-commit hooks (black, ruff, mypy)
+- [x] Add dependencies to pyproject.toml
+  - Core dependencies: openai>=1.0.0
+  - Optional dependencies: anthropic, google-generativeai
+  - Dev dependencies: pytest, mypy, black, ruff, pre-commit, pytest-cov
+  - Tool configurations: black, ruff, pytest, coverage
+- [x] Add mypy.ini with strict type checking
+- [x] Write comprehensive unit tests:
+  - ✅ test_openai_adapter.py - Adapter payload conversion (no network)
+  - ✅ test_turn_runner.py - TurnRunner logic and state management
+  - ✅ test_conversation_runner.py - ConversationRunner state management
+  - ✅ test_tool_loop.py - Tool loop behavior and edge cases
+- [x] Write integration tests with recorded responses
+  - ✅ test_recorded_responses.py - End-to-end scenarios with mocked API responses
+- [x] Add GitHub Actions CI (.github/workflows/ci.yml)
+  - Multi-version Python testing (3.10, 3.11, 3.12)
+  - Code formatting checks (black)
+  - Linting (ruff)
+  - Type checking (mypy)
+  - Test coverage reporting (codecov)
+- [x] Add pre-commit hooks (.pre-commit-config.yaml)
+  - General hooks (trailing whitespace, YAML/JSON validation)
+  - Code formatting (black)
+  - Linting (ruff with auto-fix)
+  - Type checking (mypy)
+- [x] Add pytest configuration (pytest.ini, conftest.py)
+  - Custom markers for unit/integration/slow tests
+  - Coverage configuration
 
 ---
 
