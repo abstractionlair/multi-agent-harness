@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Sequence
 
 
 @dataclass(slots=True)
 class RoleModelConfig:
-    """Minimal model selection/config for a single role."""
+    """Minimal model selection/config for a single role.
+
+    Note: This is maintained for backward compatibility with the adapter interface.
+    New code should use Participant class directly.
+    """
 
     provider: str
     model: str
@@ -15,5 +19,21 @@ class RoleModelConfig:
     seed: Optional[int] = None
 
 
-__all__ = ["RoleModelConfig"]
+@dataclass(slots=True)
+class ParticipantConfig:
+    """Configuration for a conversation participant.
+
+    This combines model configuration with identity and behavior settings.
+    """
+
+    name: str
+    provider: str
+    model: str
+    system_prompts: Sequence[str] = ()
+    temperature: float = 0.0
+    top_p: float = 1.0
+    seed: Optional[int] = None
+
+
+__all__ = ["ParticipantConfig", "RoleModelConfig"]
 
