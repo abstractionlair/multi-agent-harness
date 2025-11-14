@@ -17,10 +17,13 @@ from .adapters.base import (
 
 # Conversation primitives
 from .conversation import (
+    ConversationRunner,
     ConversationTranscript,
     ConversationTurn,
     Participant,
+    StopCondition,
     ToolInvocationRecord,
+    TranscriptAnalyzer,
     TurnRunner,
 )
 
@@ -41,10 +44,13 @@ __all__ = [
     "ToolDefinition",
     "ToolExecutor",
     # Conversation
+    "ConversationRunner",
     "ConversationTranscript",
     "ConversationTurn",
     "Participant",
+    "StopCondition",
     "ToolInvocationRecord",
+    "TranscriptAnalyzer",
     "TurnRunner",
     # Legacy (deprecated)
     "RoleEngine",
