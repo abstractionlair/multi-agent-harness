@@ -53,10 +53,15 @@ class AssistantEngine(RoleEngine):
         while response.tool_calls and steps < max_steps:
             tool_calls_payload = []
             for idx, call in enumerate(response.tool_calls):
+                if call.call_id is None:
+                    raise ValueError(
+                        f"Tool call '{call.name}' is missing required call_id. "
+                        "Provider adapters must set call_id for all tool calls."
+                    )
                 tool_calls_payload.append(
                     {
                         "type": "function",
-                        "id": call.call_id or f"call_{idx}",
+                        "id": call.call_id,
                         "function": {
                             "name": call.name,
                             "arguments": json.dumps(call.arguments),
@@ -71,7 +76,7 @@ class AssistantEngine(RoleEngine):
                 tool_msg = ChatMessage(
                     role="tool",
                     content={
-                        "tool_call_id": call.call_id or call.name,
+                        "tool_call_id": call.call_id,
                         "content": json.dumps(result),
                     },
                 )
