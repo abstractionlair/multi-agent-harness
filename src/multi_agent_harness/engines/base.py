@@ -1,36 +1,21 @@
-"""Shared engine scaffolding and transcript models for the multi-agent harness."""
+"""Shared engine scaffolding for the multi-agent harness.
+
+Note: Transcript models have been moved to conversation/transcript.py.
+This module is maintained for backward compatibility.
+"""
 
 from __future__ import annotations
 
 from abc import ABC
-from dataclasses import dataclass, field
-from typing import Any, List
+from typing import List
 
 from ..adapters.base import ChatMessage, ProviderAdapter
 from ..config import RoleModelConfig
-
-
-@dataclass(slots=True)
-class ToolInvocationRecord:
-    tool_name: str
-    arguments: dict[str, Any]
-    result: Any | None = None
-    error: str | None = None
-
-
-@dataclass(slots=True)
-class ConversationTurn:
-    role: str
-    message: str
-    tool_invocations: List[ToolInvocationRecord] = field(default_factory=list)
-
-
-@dataclass(slots=True)
-class ConversationTranscript:
-    turns: List[ConversationTurn] = field(default_factory=list)
-
-    def add_turn(self, turn: ConversationTurn) -> None:
-        self.turns.append(turn)
+from ..conversation.transcript import (
+    ConversationTranscript,
+    ConversationTurn,
+    ToolInvocationRecord,
+)
 
 
 class RoleEngine(ABC):
