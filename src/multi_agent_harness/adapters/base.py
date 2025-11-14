@@ -4,17 +4,26 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Iterable, Literal, Optional, Sequence
+from typing import Any, Callable, Iterable, Literal, Optional, Sequence, Union
 
 from ..config import RoleModelConfig
 
 SystemRole = Literal["system", "user", "assistant", "tool"]
 
+# Type alias for tool execution callable
+ToolExecutor = Callable[[str, dict[str, Any]], Any]
+
 
 @dataclass(slots=True)
 class ChatMessage:
+    """A message in a conversation.
+
+    Content can be:
+    - str: Simple text content
+    - dict: Structured content (e.g., tool calls, tool results)
+    """
     role: SystemRole
-    content: Any
+    content: Union[str, dict[str, Any]]
 
 
 @dataclass(slots=True)
@@ -77,7 +86,9 @@ __all__ = [
     "ChatResponse",
     "ProviderAdapter",
     "ResponseFormat",
+    "SystemRole",
     "ToolCall",
     "ToolDefinition",
+    "ToolExecutor",
 ]
 
