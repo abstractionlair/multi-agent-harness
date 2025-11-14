@@ -11,10 +11,15 @@ from .base import (
     ToolExecutor,
 )
 from .openai import OpenAIAdapter
+from .anthropic import AnthropicAdapter
+from .xai import XAIAdapter
+from .gemini import GeminiAdapter
 
 __all__ = [
+    "AnthropicAdapter",
     "ChatMessage",
     "ChatResponse",
+    "GeminiAdapter",
     "OpenAIAdapter",
     "ProviderAdapter",
     "ResponseFormat",
@@ -22,5 +27,6 @@ __all__ = [
     "ToolCall",
     "ToolDefinition",
     "ToolExecutor",
+    "XAIAdapter",
 ]
 

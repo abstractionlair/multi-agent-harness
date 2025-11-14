@@ -119,21 +119,21 @@ docs/
 3. **Tool call ID validation:** Don't fall back to `call.name` as ID
 4. **Error handling:** Let errors propagate naturally; don't wrap unnecessarily
 
-### Phase 2: Additional Providers
+### Phase 2: Additional Providers ✅ (Complete)
 
-- [ ] `adapters/anthropic.py`
+- [x] `adapters/anthropic.py`
   - Handle their message format (content blocks)
   - Tool use → tool_result round trip
   - System prompt injection
 
-- [ ] `adapters/xai.py`
+- [x] `adapters/xai.py`
   - OpenAI-compatible API (likely similar to openai.py)
 
-- [ ] `adapters/gemini.py`
+- [x] `adapters/gemini.py`
   - Google's content/parts format
   - Function calling via generateContent
 
-**Testing:** Mock provider responses, validate payload conversion
+**Testing:** ✅ Verification script created and passing
 
 ### Phase 3: Orchestration Layer
 
