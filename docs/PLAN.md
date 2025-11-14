@@ -9,7 +9,9 @@ A **conversation orchestration toolkit** for building multi-model LLM interactio
 
 - Wire up conversations between (Model A, Prompt A) ↔ (Model B, Prompt B)
 - Have (Model C, Prompt C) analyze transcripts and produce judgments
+  - Including various captured logs, etc.
 - Inject new participants mid-conversation
+  - Optionally having seen things like judge outputs and captured logs, etc.
 - Run fixed rounds or open-ended interactions
 - Support tools/function calling provider-agnostically
 
