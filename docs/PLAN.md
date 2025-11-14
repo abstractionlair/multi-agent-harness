@@ -102,22 +102,22 @@ docs/
 
 ## Implementation Roadmap
 
-### Phase 1: Core Primitives ✅ (Partially Done)
+### Phase 1: Core Primitives ✅ (Complete)
 
-**Status:** OpenAI adapter + basic types exist, needs refactoring
+**Status:** All core primitives implemented and refactored
 
 - [x] `adapters/base.py` — ChatMessage, ToolDefinition, ToolCall, ProviderAdapter
 - [x] `adapters/openai.py` — OpenAI implementation
-- [x] `config.py` — ParticipantConfig (currently RoleModelConfig)
-- [ ] Refactor `assistant.py` into `turn_runner.py` (generic, not role-specific)
-- [ ] Create `conversation/participant.py`
-- [ ] Create `conversation/transcript.py` (extract from engines/base.py)
+- [x] `config.py` — ParticipantConfig (currently RoleModelConfig, transitional)
+- [x] Refactor `assistant.py` into `turn_runner.py` (generic, not role-specific)
+- [x] Create `conversation/participant.py`
+- [x] Create `conversation/transcript.py` (extract from engines/base.py)
 
-**Issues to Fix:**
-1. **Type safety:** `ChatMessage.content: Any` → Union[str, dict] with proper structure
-2. **Tool executor typing:** Add `Callable[[str, dict], Any]` type alias
-3. **Tool call ID validation:** Don't fall back to `call.name` as ID
-4. **Error handling:** Let errors propagate naturally; don't wrap unnecessarily
+**Issues Fixed:**
+1. ✅ **Type safety:** `ChatMessage.content: Union[str, dict]` (base.py:26)
+2. ✅ **Tool executor typing:** `ToolExecutor = Callable[[str, dict[str, Any]], Any]` (base.py:14)
+3. ✅ **Tool call ID validation:** Raises ValueError if missing (turn_runner.py:88-92)
+4. ✅ **Error handling:** No unnecessary wrapping, errors propagate naturally
 
 ### Phase 2: Additional Providers ✅ (Complete)
 
@@ -135,43 +135,51 @@ docs/
 
 **Testing:** ✅ Verification script created and passing
 
-### Phase 3: Orchestration Layer
+### Phase 3: Orchestration Layer ✅ (Complete)
 
-- [ ] `conversation/turn_runner.py`
+**Status:** All orchestration components implemented and tested
+
+- [x] `conversation/turn_runner.py`
   - Extract from current `assistant.py`
   - Generic: takes Participant + tools + history → response
   - Handles tool loop until completion or max_steps
 
-- [ ] `conversation/conversation_runner.py`
+- [x] `conversation/conversation_runner.py`
   - New: manage (Participant A ↔ Participant B) interaction
   - Options:
     - `max_turns: int` — fixed rounds
     - `stop_condition: Callable` — custom termination
     - `starting_message: str` — who starts and with what
 
-- [ ] `conversation/analyzer.py`
+- [x] `conversation/analyzer.py`
   - New: helper for "model sees transcript, produces output"
   - Use case: judge, summarizer, interrogator
   - Input: transcript, analysis prompt, participant
   - Output: structured or unstructured response
 
-### Phase 4: Examples & Documentation
+**Testing:** ✅ Verification script created and passing (verify_phase3.py)
 
-- [ ] `examples/assistant.py`
+### Phase 4: Examples & Documentation ⚠️ (Partially Complete)
+
+**Examples:** ✅ All complete (1,390 lines total)
+
+- [x] `examples/assistant.py` (243 lines)
   - Current assistant.py behavior as an example
   - Shows: system prompts + tools + turn runner
 
-- [ ] `examples/debate.py`
+- [x] `examples/debate.py` (307 lines)
   - Two models argue for N rounds
   - Demonstrates ConversationRunner
 
-- [ ] `examples/judge.py`
+- [x] `examples/judge.py` (381 lines)
   - Third model scores a transcript
   - Demonstrates TranscriptAnalyzer
 
-- [ ] `examples/interrogator.py`
+- [x] `examples/interrogator.py` (443 lines)
   - Model asks follow-up questions after seeing transcript
   - Demonstrates: analyzer → inject into conversation
+
+**Documentation:** ❌ Missing
 
 - [ ] `docs/ARCHITECTURE.md`
   - Design philosophy (primitives, not prescriptions)
@@ -189,7 +197,14 @@ docs/
   - Testing adapters
   - Contributing guidelines
 
-### Phase 5: Testing & Infrastructure
+### Phase 5: Testing & Infrastructure ⚠️ (Partially Complete)
+
+**Completed:**
+
+- [x] Create .gitignore (comprehensive, 55 lines)
+- [x] Verification scripts (verify_phase2.py, verify_phase3.py)
+
+**Missing:**
 
 - [ ] Add dependencies to pyproject.toml:
   ```toml
@@ -203,7 +218,6 @@ docs/
   dev = ["pytest>=7.0", "mypy>=1.0", "black", "ruff"]
   ```
 
-- [ ] Create .gitignore
 - [ ] Add mypy.ini with strict type checking
 - [ ] Write unit tests:
   - Adapter payload conversion (no network)
