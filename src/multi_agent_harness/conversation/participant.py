@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
 
 from ..adapters.base import ChatMessage, ProviderAdapter
 from ..config import RoleModelConfig
@@ -22,10 +22,10 @@ class Participant:
         name: str,
         adapter: ProviderAdapter,
         model: str,
-        system_prompts: Optional[Sequence[str]] = None,
+        system_prompts: Sequence[str] | None = None,
         temperature: float = 0.0,
         top_p: float = 1.0,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """Initialize a conversation participant.
 
@@ -47,7 +47,7 @@ class Participant:
         self._system_prompts = list(system_prompts or [])
 
     @property
-    def system_prompts(self) -> List[ChatMessage]:
+    def system_prompts(self) -> list[ChatMessage]:
         """Get system prompts as ChatMessage objects."""
         return [ChatMessage(role="system", content=text) for text in self._system_prompts]
 

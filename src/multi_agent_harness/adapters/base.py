@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Literal, Optional, Sequence, Union
+from collections.abc import Callable, Iterable, Sequence
+from typing import Any, Literal
 
 from ..config import RoleModelConfig
 
@@ -22,8 +23,9 @@ class ChatMessage:
     - str: Simple text content
     - dict: Structured content (e.g., tool calls, tool results)
     """
+
     role: SystemRole
-    content: Union[str, dict[str, Any]]
+    content: str | dict[str, Any]
 
 
 @dataclass(slots=True)
@@ -47,7 +49,7 @@ class ResponseFormat:
     """Desired response formatting for providers that support JSON schemas."""
 
     type: Literal["default", "json_schema"] = "default"
-    json_schema: Optional[dict[str, Any]] = None
+    json_schema: dict[str, Any] | None = None
 
 
 @dataclass(slots=True)
@@ -62,7 +64,7 @@ class ProviderAdapter(ABC):
 
     provider_name: str
 
-    def __init__(self, api_key: Optional[str] = None) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key
 
     @abstractmethod
@@ -70,9 +72,9 @@ class ProviderAdapter(ABC):
         self,
         role_config: RoleModelConfig,
         messages: Sequence[ChatMessage],
-        tools: Optional[Iterable[ToolDefinition]] = None,
-        response_format: Optional[ResponseFormat] = None,
-        tool_choice: Optional[str] = None,
+        tools: Iterable[ToolDefinition] | None = None,
+        response_format: ResponseFormat | None = None,
+        tool_choice: str | None = None,
     ) -> ChatResponse:
         """Execute a chat completion request."""
 
@@ -91,4 +93,3 @@ __all__ = [
     "ToolDefinition",
     "ToolExecutor",
 ]
-

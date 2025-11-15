@@ -1,7 +1,5 @@
 """Pytest configuration for multi-agent-harness tests."""
 
-import pytest
-
 
 def pytest_configure(config):
     """Configure pytest with custom markers."""

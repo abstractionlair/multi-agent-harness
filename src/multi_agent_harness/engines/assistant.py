@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import json
-from typing import Iterable, List, Optional, Sequence
+from collections.abc import Iterable, Sequence
 
-from ..adapters.base import ChatMessage, ChatResponse, ProviderAdapter, ToolDefinition
+from ..adapters.base import (
+    ChatMessage,
+    ChatResponse,
+    ProviderAdapter,
+    ToolDefinition,
+    ToolExecutor,
+)
 from ..config import RoleModelConfig
 from .base import RoleEngine
 
@@ -21,17 +27,17 @@ class AssistantEngine(RoleEngine):
         self,
         role_config: RoleModelConfig,
         adapter: ProviderAdapter,
-        system_prompts: Optional[Sequence[str]] = None,
+        system_prompts: Sequence[str] | None = None,
     ) -> None:
         super().__init__("assistant", role_config, adapter)
         self.system_prompts = self.build_system_prompts(list(system_prompts or []))
 
     def run_turn(
         self,
-        history: List[ChatMessage],
+        history: list[ChatMessage],
         user_text: str,
         tools: Iterable[ToolDefinition] | None,
-        execute_tool,
+        execute_tool: ToolExecutor,
         max_steps: int = 6,
         tool_choice: str = "auto",
     ) -> ChatResponse:
@@ -52,7 +58,7 @@ class AssistantEngine(RoleEngine):
         steps = 0
         while response.tool_calls and steps < max_steps:
             tool_calls_payload = []
-            for idx, call in enumerate(response.tool_calls):
+            for _idx, call in enumerate(response.tool_calls):
                 if call.call_id is None:
                     raise ValueError(
                         f"Tool call '{call.name}' is missing required call_id. "
@@ -94,4 +100,3 @@ class AssistantEngine(RoleEngine):
 
 
 __all__ = ["AssistantEngine"]
-

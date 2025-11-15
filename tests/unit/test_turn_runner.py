@@ -1,8 +1,10 @@
 """Unit tests for TurnRunner logic."""
 
+from __future__ import annotations
+
+from typing import Any
+
 import pytest
-from typing import Any, Dict, List, Optional
-from unittest.mock import Mock, MagicMock
 
 from multi_agent_harness.adapters.base import (
     ChatMessage,
@@ -22,28 +24,30 @@ class MockAdapter(ProviderAdapter):
 
     provider_name = "mock"
 
-    def __init__(self, responses: Optional[List[ChatResponse]] = None) -> None:
+    def __init__(self, responses: list[ChatResponse] | None = None) -> None:
         super().__init__()
         self.responses = responses or []
         self.call_count = 0
-        self.calls: List[Dict[str, Any]] = []
+        self.calls: list[dict[str, Any]] = []
 
     def send_chat(
         self,
         role_config: RoleModelConfig,
-        messages: List[ChatMessage],
-        tools: Optional[List[ToolDefinition]] = None,
-        response_format: Optional[ResponseFormat] = None,
-        tool_choice: Optional[str] = None,
+        messages: list[ChatMessage],
+        tools: list[ToolDefinition] | None = None,
+        response_format: ResponseFormat | None = None,
+        tool_choice: str | None = None,
     ) -> ChatResponse:
         # Record the call
-        self.calls.append({
-            "role_config": role_config,
-            "messages": messages,
-            "tools": tools,
-            "response_format": response_format,
-            "tool_choice": tool_choice,
-        })
+        self.calls.append(
+            {
+                "role_config": role_config,
+                "messages": messages,
+                "tools": tools,
+                "response_format": response_format,
+                "tool_choice": tool_choice,
+            }
+        )
 
         # Return next response
         if self.call_count < len(self.responses):
@@ -114,7 +118,7 @@ class TestTurnRunnerInitialization:
             )
         ]
 
-        def executor(name: str, args: Dict[str, Any]) -> Any:
+        def executor(name: str, args: dict[str, Any]) -> Any:
             return {"result": "ok"}
 
         runner = TurnRunner(
@@ -184,10 +188,7 @@ class TestTurnRunnerExecution:
             ChatMessage(role="assistant", content="Hi!"),
         ]
 
-        result = runner.run_turn(
-            history=history,
-            user_message="Can you help me?",
-        )
+        runner.run_turn(history=history, user_message="Can you help me?")
 
         # Verify history was included
         assert adapter.call_count == 1
@@ -224,7 +225,7 @@ class TestTurnRunnerExecution:
         # Mock tool executor
         tool_results = []
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             tool_results.append({"name": name, "args": args})
             return {"temperature": 72, "conditions": "sunny"}
 
@@ -291,7 +292,7 @@ class TestTurnRunnerExecution:
 
         executed_tools = []
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             executed_tools.append(name)
             return {"status": "ok"}
 
@@ -337,7 +338,7 @@ class TestTurnRunnerExecution:
 
         call_count = 0
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             nonlocal call_count
             call_count += 1
             return {}
@@ -352,11 +353,7 @@ class TestTurnRunnerExecution:
             tool_executor=tool_executor,
         )
 
-        result = runner.run_turn(
-            history=[],
-            user_message="Test",
-            max_tool_steps=3,
-        )
+        runner.run_turn(history=[], user_message="Test", max_tool_steps=3)
 
         # Should stop after max_tool_steps
         assert call_count == 3
@@ -378,7 +375,7 @@ class TestTurnRunnerExecution:
             model="test-model",
         )
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             return {}
 
         tools = [
@@ -417,11 +414,7 @@ class TestTurnRunnerExecution:
             json_schema={"type": "object", "properties": {"answer": {"type": "number"}}},
         )
 
-        result = runner.run_turn(
-            history=[],
-            user_message="What is the answer?",
-            response_format=response_format,
-        )
+        runner.run_turn(history=[], user_message="What is the answer?", response_format=response_format)
 
         # Verify response_format was passed to adapter
         assert adapter.call_count == 1
@@ -449,7 +442,7 @@ class TestTurnRunnerExecution:
             model="test-model",
         )
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             return {}
 
         tools = [
@@ -462,11 +455,7 @@ class TestTurnRunnerExecution:
             tool_executor=tool_executor,
         )
 
-        result = runner.run_turn(
-            history=[],
-            user_message="Test",
-            tool_choice="required",
-        )
+        runner.run_turn(history=[], user_message="Test", tool_choice="required")
 
         # Verify tool_choice was passed
         assert adapter.call_count == 2

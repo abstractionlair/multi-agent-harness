@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Optional, Sequence
 
 
 @dataclass(slots=True)
@@ -16,7 +16,7 @@ class RoleModelConfig:
     model: str
     temperature: float = 0.0
     top_p: float = 1.0
-    seed: Optional[int] = None
+    seed: int | None = None
 
 
 @dataclass(slots=True)
@@ -32,8 +32,7 @@ class ParticipantConfig:
     system_prompts: Sequence[str] = ()
     temperature: float = 0.0
     top_p: float = 1.0
-    seed: Optional[int] = None
+    seed: int | None = None
 
 
 __all__ = ["ParticipantConfig", "RoleModelConfig"]
-

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from ..adapters.base import ChatMessage, ChatResponse, ResponseFormat
 from .participant import Participant
 from .transcript import ConversationTranscript
@@ -33,8 +31,8 @@ class TranscriptAnalyzer:
     def analyze(
         self,
         transcript: ConversationTranscript,
-        analysis_prompt: Optional[str] = None,
-        response_format: Optional[ResponseFormat] = None,
+        analysis_prompt: str | None = None,
+        response_format: ResponseFormat | None = None,
     ) -> ChatResponse:
         """Analyze a conversation transcript and produce a response.
 

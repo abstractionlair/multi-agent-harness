@@ -1,8 +1,10 @@
 """Unit tests for ConversationRunner state management."""
 
+from __future__ import annotations
+
+from typing import Any
+
 import pytest
-from typing import Any, Dict, List, Optional
-from unittest.mock import Mock
 
 from multi_agent_harness.adapters.base import (
     ChatMessage,
@@ -13,9 +15,12 @@ from multi_agent_harness.adapters.base import (
     ToolDefinition,
 )
 from multi_agent_harness.config import RoleModelConfig
-from multi_agent_harness.conversation.participant import Participant
 from multi_agent_harness.conversation.conversation_runner import ConversationRunner
-from multi_agent_harness.conversation.transcript import ConversationTranscript, ConversationTurn
+from multi_agent_harness.conversation.participant import Participant
+from multi_agent_harness.conversation.transcript import (
+    ConversationTranscript,
+    ConversationTurn,
+)
 
 
 class MockAdapter(ProviderAdapter):
@@ -23,27 +28,29 @@ class MockAdapter(ProviderAdapter):
 
     provider_name = "mock"
 
-    def __init__(self, responses: Optional[List[ChatResponse]] = None) -> None:
+    def __init__(self, responses: list[ChatResponse] | None = None) -> None:
         super().__init__()
         self.responses = responses or []
         self.call_count = 0
-        self.calls: List[Dict[str, Any]] = []
+        self.calls: list[dict[str, Any]] = []
 
     def send_chat(
         self,
         role_config: RoleModelConfig,
-        messages: List[ChatMessage],
-        tools: Optional[List[ToolDefinition]] = None,
-        response_format: Optional[ResponseFormat] = None,
-        tool_choice: Optional[str] = None,
+        messages: list[ChatMessage],
+        tools: list[ToolDefinition] | None = None,
+        response_format: ResponseFormat | None = None,
+        tool_choice: str | None = None,
     ) -> ChatResponse:
-        self.calls.append({
-            "role_config": role_config,
-            "messages": messages,
-            "tools": tools,
-            "response_format": response_format,
-            "tool_choice": tool_choice,
-        })
+        self.calls.append(
+            {
+                "role_config": role_config,
+                "messages": messages,
+                "tools": tools,
+                "response_format": response_format,
+                "tool_choice": tool_choice,
+            }
+        )
 
         if self.call_count < len(self.responses):
             response = self.responses[self.call_count]
@@ -113,7 +120,7 @@ class TestConversationRunnerInitialization:
             ToolDefinition(name="test_tool", description="Test", input_schema={}),
         ]
 
-        def executor(name: str, args: Dict[str, Any]) -> Any:
+        def executor(name: str, args: dict[str, Any]) -> Any:
             return {"result": "ok"}
 
         runner = ConversationRunner(
@@ -405,7 +412,7 @@ class TestConversationRunnerExecution:
 
         runner = ConversationRunner(participants=[participant1, participant2])
 
-        transcript = runner.run(
+        runner.run(
             starting_message="Start",
             max_turns=3,
         )
@@ -443,7 +450,7 @@ class TestConversationRunnerExecution:
         participant1 = Participant(name="Alice", adapter=adapter1, model="model1")
         participant2 = Participant(name="Bob", adapter=adapter2, model="model2")
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             return {"result": "ok"}
 
         tools = [

@@ -1,12 +1,11 @@
 """Unit tests for OpenAI adapter payload conversion (no network required)."""
 
 import json
-import pytest
-from typing import Any, Dict
 
-from multi_agent_harness.adapters.base import ChatMessage, ToolDefinition, ToolCall
+import pytest
+
+from multi_agent_harness.adapters.base import ChatMessage, ToolDefinition
 from multi_agent_harness.adapters.openai import OpenAIAdapter
-from multi_agent_harness.config import RoleModelConfig
 
 
 class TestOpenAIMessageConversion:

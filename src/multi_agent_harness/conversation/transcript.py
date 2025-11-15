@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, List
+from typing import Any
 
 
 @dataclass(slots=True)
@@ -22,14 +22,14 @@ class ConversationTurn:
 
     role: str
     message: str
-    tool_invocations: List[ToolInvocationRecord] = field(default_factory=list)
+    tool_invocations: list[ToolInvocationRecord] = field(default_factory=list)
 
 
 @dataclass(slots=True)
 class ConversationTranscript:
     """A complete conversation history."""
 
-    turns: List[ConversationTurn] = field(default_factory=list)
+    turns: list[ConversationTurn] = field(default_factory=list)
 
     def add_turn(self, turn: ConversationTurn) -> None:
         """Add a turn to the transcript."""

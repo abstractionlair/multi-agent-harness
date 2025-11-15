@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Callable, List, Optional, Sequence
+from collections.abc import Callable, Sequence
 
-from ..adapters.base import ChatMessage, ResponseFormat, ToolDefinition, ToolExecutor
+from ..adapters.base import (
+    ChatMessage,
+    ResponseFormat,
+    SystemRole,
+    ToolDefinition,
+    ToolExecutor,
+)
 from .participant import Participant
 from .transcript import ConversationTranscript, ConversationTurn, ToolInvocationRecord
 from .turn_runner import TurnRunner
@@ -24,8 +30,8 @@ class ConversationRunner:
     def __init__(
         self,
         participants: Sequence[Participant],
-        tools: Optional[Sequence[ToolDefinition]] = None,
-        tool_executor: Optional[ToolExecutor] = None,
+        tools: Sequence[ToolDefinition] | None = None,
+        tool_executor: ToolExecutor | None = None,
     ) -> None:
         """Initialize a conversation runner.
 
@@ -61,12 +67,12 @@ class ConversationRunner:
     def run(
         self,
         starting_message: str,
-        starting_participant: Optional[Participant] = None,
-        max_turns: Optional[int] = None,
-        stop_condition: Optional[StopCondition] = None,
-        initial_transcript: Optional[ConversationTranscript] = None,
+        starting_participant: Participant | None = None,
+        max_turns: int | None = None,
+        stop_condition: StopCondition | None = None,
+        initial_transcript: ConversationTranscript | None = None,
         tool_choice: str = "auto",
-        response_format: Optional[ResponseFormat] = None,
+        response_format: ResponseFormat | None = None,
     ) -> ConversationTranscript:
         """Run a multi-turn conversation between participants.
 
@@ -97,11 +103,12 @@ class ConversationRunner:
             except ValueError:
                 raise ValueError(
                     f"starting_participant '{starting_participant.name}' not found in participants"
-                )
+                ) from None
 
         # Build conversation history as simple user/assistant pairs
         # Each participant sees previous messages as context
         current_message = starting_message
+        initial_user_message = starting_message
         turn_count = 0
 
         while True:
@@ -118,7 +125,7 @@ class ConversationRunner:
 
             # Build conversation history for this participant
             # They see all previous turns as user-assistant exchanges
-            history = self._build_history_for_participant(transcript)
+            history = self._build_history_for_participant(transcript, initial_user_message)
 
             # Execute turn
             response = turn_runner.run_turn(
@@ -168,8 +175,8 @@ class ConversationRunner:
         return transcript
 
     def _build_history_for_participant(
-        self, transcript: ConversationTranscript
-    ) -> List[ChatMessage]:
+        self, transcript: ConversationTranscript, initial_user_message: str | None
+    ) -> list[ChatMessage]:
         """Build conversation history from a participant's perspective.
 
         Each participant sees the conversation as a series of user-assistant exchanges.
@@ -181,13 +188,16 @@ class ConversationRunner:
         Returns:
             List of ChatMessage objects representing the conversation history
         """
-        messages: List[ChatMessage] = []
+        messages: list[ChatMessage] = []
+
+        if transcript.turns and initial_user_message is not None:
+            messages.append(ChatMessage(role="user", content=initial_user_message))
 
         for idx, turn in enumerate(transcript.turns):
             # Alternate between user and assistant roles
             # Even indices (0, 2, 4...) are user messages
             # Odd indices (1, 3, 5...) are assistant messages
-            role = "user" if idx % 2 == 0 else "assistant"
+            role: SystemRole = "user" if idx % 2 == 0 else "assistant"
             messages.append(ChatMessage(role=role, content=turn.message))
 
         return messages

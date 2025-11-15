@@ -5,8 +5,7 @@ without making actual network calls.
 """
 
 import json
-import pytest
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from multi_agent_harness.adapters.base import (
     ChatMessage,
@@ -27,7 +26,7 @@ class RecordedAdapter(ProviderAdapter):
 
     provider_name = "recorded"
 
-    def __init__(self, recorded_responses: List[Dict[str, Any]]) -> None:
+    def __init__(self, recorded_responses: list[dict[str, Any]]) -> None:
         super().__init__()
         self.recorded_responses = recorded_responses
         self.call_index = 0
@@ -35,10 +34,10 @@ class RecordedAdapter(ProviderAdapter):
     def send_chat(
         self,
         role_config: RoleModelConfig,
-        messages: List[ChatMessage],
-        tools: Optional[List[ToolDefinition]] = None,
-        response_format: Optional[ResponseFormat] = None,
-        tool_choice: Optional[str] = None,
+        messages: list[ChatMessage],
+        tools: list[ToolDefinition] | None = None,
+        response_format: ResponseFormat | None = None,
+        tool_choice: str | None = None,
     ) -> ChatResponse:
         if self.call_index >= len(self.recorded_responses):
             raise RuntimeError(
@@ -170,7 +169,7 @@ class TestRecordedToolCalling:
         )
 
         # Mock tool executor
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             if name == "get_weather":
                 return {
                     "temperature": 68,
@@ -244,7 +243,7 @@ class TestRecordedToolCalling:
             model="gpt-4o-mini",
         )
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             if name == "calculate":
                 op = args["operation"]
                 a = args["a"]
@@ -253,7 +252,7 @@ class TestRecordedToolCalling:
                     return {"result": a + b}
                 elif op == "multiply":
                     return {"result": a * b}
-            raise ValueError(f"Unknown operation")
+            raise ValueError("Unknown operation")
 
         tools = [
             ToolDefinition(
@@ -320,7 +319,7 @@ class TestRecordedToolCalling:
             "Tokyo": {"temp": 25, "unit": "C"},
         }
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             location = args["location"]
             return weather_data.get(location, {"temp": 0, "unit": "C"})
 
@@ -382,7 +381,7 @@ class TestRecordedComplexScenarios:
         alice = Participant(name="Alice", adapter=alice_adapter, model="gpt-4o-mini")
         bob = Participant(name="Bob", adapter=bob_adapter, model="gpt-4o-mini")
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             return {"temperature": 18, "conditions": "partly cloudy"}
 
         tools = [

@@ -224,7 +224,6 @@ docs/
   - ✅ test_recorded_responses.py - End-to-end scenarios with mocked API responses
 - [x] Add GitHub Actions CI (.github/workflows/ci.yml)
   - Multi-version Python testing (3.10, 3.11, 3.12)
-  - Code formatting checks (black)
   - Linting (ruff)
   - Type checking (mypy)
   - Test coverage reporting (codecov)
@@ -236,6 +235,10 @@ docs/
 - [x] Add pytest configuration (pytest.ini, conftest.py)
   - Custom markers for unit/integration/slow tests
   - Coverage configuration
+
+**Open Items:**
+
+- [ ] Choose and configure a long-term code formatter (Black is currently disabled in CI; revisit formatter choice and configuration once style conventions are finalized.)
 
 ---
 

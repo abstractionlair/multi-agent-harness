@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Iterable, List, Optional
+from collections.abc import Iterable
 
 from ..adapters.base import (
     ChatMessage,
@@ -25,8 +25,8 @@ class TurnRunner:
     def __init__(
         self,
         participant: Participant,
-        tools: Optional[Iterable[ToolDefinition]] = None,
-        tool_executor: Optional[ToolExecutor] = None,
+        tools: Iterable[ToolDefinition] | None = None,
+        tool_executor: ToolExecutor | None = None,
     ) -> None:
         """Initialize a turn runner.
 
@@ -44,11 +44,11 @@ class TurnRunner:
 
     def run_turn(
         self,
-        history: List[ChatMessage],
+        history: list[ChatMessage],
         user_message: str,
         max_tool_steps: int = 6,
         tool_choice: str = "auto",
-        response_format: Optional[ResponseFormat] = None,
+        response_format: ResponseFormat | None = None,
     ) -> ChatResponse:
         """Execute a turn and resolve tool calls until completion or max_steps.
 
@@ -80,11 +80,13 @@ class TurnRunner:
         )
 
         # Tool loop: continue until no tool calls or max steps reached
+        executed_calls: list[ToolCall] = []
         steps = 0
         while response.tool_calls and steps < max_tool_steps:
+            executed_calls.extend(response.tool_calls)
             # Validate and prepare tool call message
             tool_calls_payload = []
-            for idx, call in enumerate(response.tool_calls):
+            for _idx, call in enumerate(response.tool_calls):
                 if call.call_id is None:
                     raise ValueError(
                         f"Tool call '{call.name}' is missing required call_id. "
@@ -131,6 +133,12 @@ class TurnRunner:
             )
             steps += 1
 
+        if executed_calls:
+            return ChatResponse(
+                message=response.message,
+                tool_calls=tuple(executed_calls),
+                raw=response.raw,
+            )
         return response
 
 

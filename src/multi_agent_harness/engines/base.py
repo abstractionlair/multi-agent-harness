@@ -7,7 +7,6 @@ This module is maintained for backward compatibility.
 from __future__ import annotations
 
 from abc import ABC
-from typing import List
 
 from ..adapters.base import ChatMessage, ProviderAdapter
 from ..config import RoleModelConfig
@@ -28,7 +27,7 @@ class RoleEngine(ABC):
         self.role_config = role_config
         self.adapter = adapter
 
-    def build_system_prompts(self, prompt_texts: List[str]) -> List[ChatMessage]:
+    def build_system_prompts(self, prompt_texts: list[str]) -> list[ChatMessage]:
         return [ChatMessage(role="system", content=text) for text in prompt_texts]
 
 
@@ -38,4 +37,3 @@ __all__ = [
     "RoleEngine",
     "ToolInvocationRecord",
 ]
-

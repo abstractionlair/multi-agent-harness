@@ -6,22 +6,23 @@ Reads GOOGLE_API_KEY from env or .env for REST fallback.
 
 from __future__ import annotations
 
-import os
 import json
-from typing import Iterable, Optional, Sequence, Any, Dict, List
+import os
+from collections.abc import Iterable, Sequence
+from typing import Any, cast
 
 from .base import (
     ChatMessage,
     ChatResponse,
     ProviderAdapter,
     ResponseFormat,
-    ToolDefinition,
     ToolCall,
+    ToolDefinition,
 )
 from ..config import RoleModelConfig
 
 try:
-    import google.generativeai as genai  # type: ignore
+    import google.generativeai as genai
 except ImportError:  # pragma: no cover - optional dependency
     genai = None
 
@@ -29,7 +30,7 @@ except ImportError:  # pragma: no cover - optional dependency
 class GeminiAdapter(ProviderAdapter):
     provider_name = "gemini"
 
-    def __init__(self, api_key: Optional[str] = None, max_retries: int = 2) -> None:
+    def __init__(self, api_key: str | None = None, max_retries: int = 2) -> None:
         super().__init__(api_key or os.environ.get("GOOGLE_API_KEY"))
         if genai and self.api_key:
             genai.configure(api_key=self.api_key)
@@ -39,13 +40,13 @@ class GeminiAdapter(ProviderAdapter):
         self,
         role_config: RoleModelConfig,
         messages: Sequence[ChatMessage],
-        tools: Optional[Iterable[ToolDefinition]] = None,
-        response_format: Optional[ResponseFormat] = None,
-        tool_choice: Optional[str] = None,
+        tools: Iterable[ToolDefinition] | None = None,
+        response_format: ResponseFormat | None = None,
+        tool_choice: str | None = None,
     ) -> ChatResponse:
         # Extract system instructions
-        system_instructions: List[str] = []
-        converted_messages: List[Dict[str, Any]] = []
+        system_instructions: list[str] = []
+        converted_messages: list[dict[str, Any]] = []
 
         for msg in messages:
             if msg.role == "system":
@@ -57,7 +58,7 @@ class GeminiAdapter(ProviderAdapter):
                 converted_messages.append(self._convert_message(msg))
 
         # Build generation config
-        generation_config = {
+        generation_config: dict[str, Any] = {
             "temperature": role_config.temperature,
             "top_p": role_config.top_p,
         }
@@ -96,13 +97,15 @@ class GeminiAdapter(ProviderAdapter):
     def _send_with_sdk(
         self,
         model_name: str,
-        messages: List[Dict[str, Any]],
-        system_instruction: Optional[str],
-        tools: Optional[List[ToolDefinition]],
-        generation_config: Dict[str, Any],
+        messages: list[dict[str, Any]],
+        system_instruction: str | None,
+        tools: list[ToolDefinition] | None,
+        generation_config: dict[str, Any],
     ) -> ChatResponse:
         """Send request using the Google Generative AI SDK."""
-        model_kwargs: Dict[str, Any] = {}
+        if genai is None:  # pragma: no cover - guard for typing
+            raise RuntimeError("google-generativeai SDK is not available")
+        model_kwargs: dict[str, Any] = {}
         if system_instruction:
             model_kwargs["system_instruction"] = system_instruction
 
@@ -119,7 +122,7 @@ class GeminiAdapter(ProviderAdapter):
         # Build contents from messages
         contents = [self._message_to_content(msg) for msg in messages]
 
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
         for attempt in range(self._max_retries + 1):
             try:
                 if gemini_tools:
@@ -144,13 +147,13 @@ class GeminiAdapter(ProviderAdapter):
     def _send_with_rest(
         self,
         model_name: str,
-        messages: List[Dict[str, Any]],
-        system_instruction: Optional[str],
-        tools: Optional[List[ToolDefinition]],
-        generation_config: Dict[str, Any],
+        messages: list[dict[str, Any]],
+        system_instruction: str | None,
+        tools: list[ToolDefinition] | None,
+        generation_config: dict[str, Any],
     ) -> ChatResponse:
         """Send request using REST API."""
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "contents": [self._message_to_content(msg) for msg in messages],
             "generationConfig": generation_config,
         }
@@ -161,15 +164,17 @@ class GeminiAdapter(ProviderAdapter):
             }
 
         if tools:
-            payload["tools"] = [{
-                "functionDeclarations": [self._convert_tool_to_rest(tool) for tool in tools]
-            }]
+            payload["tools"] = [
+                {
+                    "functionDeclarations": [self._convert_tool_to_rest(tool) for tool in tools]
+                }
+            ]
 
         response = self._rest_generate_content(model_name, payload)
         return self._convert_rest_response(response)
 
     @staticmethod
-    def _convert_message(message: ChatMessage) -> Dict[str, Any]:
+    def _convert_message(message: ChatMessage) -> dict[str, Any]:
         """Convert our ChatMessage to Gemini's internal format (before parts conversion)."""
         # Map our roles to Gemini's roles
         role_map = {
@@ -184,27 +189,27 @@ class GeminiAdapter(ProviderAdapter):
         return {
             "role": gemini_role,
             "content": message.content,
-            "original_role": message.role  # Keep track for special handling
+            "original_role": message.role,  # Keep track for special handling
         }
 
     @staticmethod
-    def _message_to_content(message: Dict[str, Any]) -> Dict[str, Any]:
+    def _message_to_content(message: dict[str, Any]) -> dict[str, Any]:
         """Convert message to Gemini content format with parts."""
-        parts: List[Dict[str, Any]] = []
+        parts: list[dict[str, Any]] = []
 
         # Handle tool results
         if message.get("original_role") == "tool":
             content = message["content"]
             if isinstance(content, dict) and "tool_call_id" in content:
                 # This is a function response
-                parts.append({
-                    "functionResponse": {
-                        "name": content.get("name", "unknown"),
-                        "response": {
-                            "result": content.get("content", "")
+                parts.append(
+                    {
+                        "functionResponse": {
+                            "name": content.get("name", "unknown"),
+                            "response": {"result": content.get("content", "")},
                         }
                     }
-                })
+                )
             else:
                 parts.append({"text": str(content)})
         # Handle assistant messages with tool calls
@@ -217,12 +222,14 @@ class GeminiAdapter(ProviderAdapter):
             if "tool_calls" in content_dict:
                 for tc in content_dict["tool_calls"]:
                     func = tc.get("function", {})
-                    parts.append({
-                        "functionCall": {
-                            "name": func.get("name", ""),
-                            "args": json.loads(func.get("arguments", "{}"))
+                    parts.append(
+                        {
+                            "functionCall": {
+                                "name": func.get("name", ""),
+                                "args": json.loads(func.get("arguments", "{}")),
+                            }
                         }
-                    })
+                    )
         # Handle simple text messages
         else:
             content = message["content"]
@@ -233,7 +240,7 @@ class GeminiAdapter(ProviderAdapter):
 
         return {
             "role": message["role"],
-            "parts": parts
+            "parts": parts,
         }
 
     @staticmethod
@@ -241,15 +248,17 @@ class GeminiAdapter(ProviderAdapter):
         """Convert ToolDefinition to Gemini SDK format."""
         # The SDK expects actual genai types, but we'll return dict for compatibility
         return {
-            "function_declarations": [{
-                "name": tool.name,
-                "description": tool.description,
-                "parameters": tool.input_schema,
-            }]
+            "function_declarations": [
+                {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": tool.input_schema,
+                }
+            ]
         }
 
     @staticmethod
-    def _convert_tool_to_rest(tool: ToolDefinition) -> Dict[str, Any]:
+    def _convert_tool_to_rest(tool: ToolDefinition) -> dict[str, Any]:
         """Convert ToolDefinition to Gemini REST format."""
         return {
             "name": tool.name,
@@ -260,8 +269,8 @@ class GeminiAdapter(ProviderAdapter):
     @staticmethod
     def _convert_sdk_response(response: Any) -> ChatResponse:
         """Convert Gemini SDK response to ChatResponse."""
-        text_parts: List[str] = []
-        tool_calls: List[ToolCall] = []
+        text_parts: list[str] = []
+        tool_calls: list[ToolCall] = []
 
         # Process response parts
         for candidate in response.candidates:
@@ -270,11 +279,13 @@ class GeminiAdapter(ProviderAdapter):
                     text_parts.append(part.text)
                 elif hasattr(part, "function_call"):
                     fc = part.function_call
-                    tool_calls.append(ToolCall(
-                        name=fc.name,
-                        arguments=dict(fc.args),
-                        call_id=fc.name  # Gemini doesn't provide separate IDs
-                    ))
+                    tool_calls.append(
+                        ToolCall(
+                            name=fc.name,
+                            arguments=dict(fc.args),
+                            call_id=fc.name,  # Gemini doesn't provide separate IDs
+                        )
+                    )
 
         content = "".join(text_parts)
 
@@ -285,10 +296,10 @@ class GeminiAdapter(ProviderAdapter):
         )
 
     @staticmethod
-    def _convert_rest_response(response: Dict[str, Any]) -> ChatResponse:
+    def _convert_rest_response(response: dict[str, Any]) -> ChatResponse:
         """Convert Gemini REST response to ChatResponse."""
-        text_parts: List[str] = []
-        tool_calls: List[ToolCall] = []
+        text_parts: list[str] = []
+        tool_calls: list[ToolCall] = []
 
         candidates = response.get("candidates", [])
         if candidates:
@@ -300,11 +311,13 @@ class GeminiAdapter(ProviderAdapter):
                     text_parts.append(part["text"])
                 elif "functionCall" in part:
                     fc = part["functionCall"]
-                    tool_calls.append(ToolCall(
-                        name=fc.get("name", ""),
-                        arguments=fc.get("args", {}),
-                        call_id=fc.get("name", "")
-                    ))
+                    tool_calls.append(
+                        ToolCall(
+                            name=fc.get("name", ""),
+                            arguments=fc.get("args", {}),
+                            call_id=fc.get("name", ""),
+                        )
+                    )
 
         content = "".join(text_parts)
 
@@ -315,7 +328,7 @@ class GeminiAdapter(ProviderAdapter):
         )
 
     @staticmethod
-    def _rest_generate_content(model_name: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    def _rest_generate_content(model_name: str, body: dict[str, Any]) -> dict[str, Any]:
         """Make a REST call to Gemini's generateContent API."""
         import urllib.request
         import json as _json
@@ -342,18 +355,24 @@ class GeminiAdapter(ProviderAdapter):
 
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
-                payload = _json.loads(resp.read().decode("utf-8"))
+                payload = cast(dict[str, Any], _json.loads(resp.read().decode("utf-8")))
             return payload
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "ignore") if hasattr(e, "read") else ""
-            raise urllib.error.HTTPError(e.url, e.code, f"{e.reason}: {detail}", e.hdrs, e.fp)
+            raise urllib.error.HTTPError(
+                e.url,
+                e.code,
+                f"{e.reason}: {detail}",
+                e.hdrs,
+                e.fp,
+            ) from e
 
     @staticmethod
     def _load_dotenv() -> None:
         """Load environment variables from .env file."""
         path = os.path.abspath(os.path.join(os.getcwd(), ".env"))
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 for raw in f:
                     line = raw.strip()
                     if not line or line.startswith("#"):

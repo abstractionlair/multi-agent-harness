@@ -1,9 +1,5 @@
 """Multi-agent LLM conversation orchestration toolkit."""
 
-# Configuration
-from .config import ParticipantConfig, RoleModelConfig
-
-# Adapter primitives
 from .adapters.base import (
     ChatMessage,
     ChatResponse,
@@ -14,8 +10,7 @@ from .adapters.base import (
     ToolDefinition,
     ToolExecutor,
 )
-
-# Conversation primitives
+from .config import ParticipantConfig, RoleModelConfig
 from .conversation import (
     ConversationRunner,
     ConversationTranscript,
@@ -26,8 +21,6 @@ from .conversation import (
     TranscriptAnalyzer,
     TurnRunner,
 )
-
-# Legacy imports (backward compatibility)
 from .engines.base import RoleEngine
 
 __all__ = [
@@ -55,4 +48,3 @@ __all__ = [
     # Legacy (deprecated)
     "RoleEngine",
 ]
-

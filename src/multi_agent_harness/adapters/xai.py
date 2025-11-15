@@ -6,49 +6,43 @@ but uses XAI_API_KEY and the xAI base URL.
 
 from __future__ import annotations
 
-import os
 import json
-from typing import Iterable, Optional, Sequence, Any, Dict
+import os
+from collections.abc import Iterable, Sequence
+from typing import Any, TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from openai import OpenAI as OpenAIType
+else:
+    OpenAIType = Any
 
 from .base import (
     ChatMessage,
     ChatResponse,
     ProviderAdapter,
     ResponseFormat,
-    ToolDefinition,
     ToolCall,
+    ToolDefinition,
 )
 from ..config import RoleModelConfig
-
-try:
-    from openai import OpenAI  # type: ignore
-except ImportError:  # pragma: no cover - optional dependency
-    OpenAI = None
-
 
 class XAIAdapter(ProviderAdapter):
     provider_name = "xai"
 
-    def __init__(self, api_key: Optional[str] = None, max_retries: int = 2) -> None:
+    def __init__(self, api_key: str | None = None, max_retries: int = 2) -> None:
         super().__init__(api_key or os.environ.get("XAI_API_KEY"))
-        if OpenAI and self.api_key:
-            self._client = OpenAI(
-                api_key=self.api_key,
-                base_url="https://api.x.ai/v1"
-            )
-        else:
-            self._client = None
+        self._client: OpenAIType | None = self._create_client()
         self._max_retries = max(0, max_retries)
 
     def send_chat(
         self,
         role_config: RoleModelConfig,
         messages: Sequence[ChatMessage],
-        tools: Optional[Iterable[ToolDefinition]] = None,
-        response_format: Optional[ResponseFormat] = None,
-        tool_choice: Optional[str] = None,
+        tools: Iterable[ToolDefinition] | None = None,
+        response_format: ResponseFormat | None = None,
+        tool_choice: str | None = None,
     ) -> ChatResponse:
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "model": role_config.model,
             "messages": [self._convert_message(msg) for msg in messages],
             "temperature": role_config.temperature,
@@ -75,8 +69,10 @@ class XAIAdapter(ProviderAdapter):
     def supports_tools(self) -> bool:
         return True
 
-    def _call_with_retries(self, payload: Dict[str, Any]):
-        last_error: Optional[Exception] = None
+    def _call_with_retries(self, payload: dict[str, Any]) -> Any:
+        if self._client is None:
+            raise RuntimeError("xAI SDK client is not available")
+        last_error: Exception | None = None
         for attempt in range(self._max_retries + 1):
             try:
                 return self._client.chat.completions.create(**payload)
@@ -87,7 +83,7 @@ class XAIAdapter(ProviderAdapter):
         raise RuntimeError(f"xAI chat completion failed after retries: {last_error}") from last_error
 
     @staticmethod
-    def _convert_message(message: ChatMessage) -> Dict[str, Any]:
+    def _convert_message(message: ChatMessage) -> dict[str, Any]:
         # Assistant message with explicit tool_calls (structured)
         if message.role == "assistant" and isinstance(message.content, dict) and "tool_calls" in message.content:
             return {
@@ -111,7 +107,7 @@ class XAIAdapter(ProviderAdapter):
         }
 
     @staticmethod
-    def _convert_tool(tool: ToolDefinition) -> Dict[str, Any]:
+    def _convert_tool(tool: ToolDefinition) -> dict[str, Any]:
         return {
             "type": "function",
             "function": {
@@ -142,7 +138,7 @@ class XAIAdapter(ProviderAdapter):
         )
 
     @staticmethod
-    def _convert_completion_rest(completion: Dict[str, Any]) -> ChatResponse:
+    def _convert_completion_rest(completion: dict[str, Any]) -> ChatResponse:
         choice = completion["choices"][0]
         message = choice["message"]
         content = message.get("content") or ""
@@ -164,7 +160,7 @@ class XAIAdapter(ProviderAdapter):
         )
 
     @staticmethod
-    def _rest_chat_completions(body: Dict[str, Any]) -> Dict[str, Any]:
+    def _rest_chat_completions(body: dict[str, Any]) -> dict[str, Any]:
         import urllib.request
         import json as _json
 
@@ -187,18 +183,24 @@ class XAIAdapter(ProviderAdapter):
 
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
-                payload = _json.loads(resp.read().decode("utf-8"))
+                payload = cast(dict[str, Any], _json.loads(resp.read().decode("utf-8")))
             return payload
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "ignore") if hasattr(e, "read") else ""
-            raise urllib.error.HTTPError(e.url, e.code, f"{e.reason}: {detail}", e.hdrs, e.fp)
+            raise urllib.error.HTTPError(
+                e.url,
+                e.code,
+                f"{e.reason}: {detail}",
+                e.hdrs,
+                e.fp,
+            ) from e
 
-    def _rest_chat_completions_with_fallback(self, body: Dict[str, Any]) -> Dict[str, Any]:
+    def _rest_chat_completions_with_fallback(self, body: dict[str, Any]) -> dict[str, Any]:
         import urllib.error
 
         attempted: list[str] = []
         models = [body.get("model"), "grok-beta"]
-        last_err: Optional[Exception] = None
+        last_err: Exception | None = None
         for m in models:
             if not m or m in attempted:
                 continue
@@ -223,7 +225,7 @@ class XAIAdapter(ProviderAdapter):
     def _load_dotenv() -> None:
         path = os.path.abspath(os.path.join(os.getcwd(), ".env"))
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 for raw in f:
                     line = raw.strip()
                     if not line or line.startswith("#"):
@@ -237,6 +239,15 @@ class XAIAdapter(ProviderAdapter):
                             os.environ[k] = v
         except FileNotFoundError:
             pass
+
+    def _create_client(self) -> OpenAIType | None:
+        if not self.api_key:
+            return None
+        try:
+            from openai import OpenAI as OpenAIRuntime
+        except ImportError:  # pragma: no cover - optional dependency
+            return None
+        return OpenAIRuntime(api_key=self.api_key, base_url="https://api.x.ai/v1")
 
 
 __all__ = ["XAIAdapter"]

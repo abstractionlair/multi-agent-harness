@@ -1,8 +1,10 @@
 """Comprehensive tests for tool loop behavior and edge cases."""
 
-import json
+from __future__ import annotations
+
+from typing import Any
+
 import pytest
-from typing import Any, Dict, List, Optional
 
 from multi_agent_harness.adapters.base import (
     ChatMessage,
@@ -21,7 +23,7 @@ class MockAdapter(ProviderAdapter):
 
     provider_name = "mock"
 
-    def __init__(self, responses: Optional[List[ChatResponse]] = None) -> None:
+    def __init__(self, responses: list[ChatResponse] | None = None) -> None:
         super().__init__()
         self.responses = responses or []
         self.call_count = 0
@@ -29,10 +31,10 @@ class MockAdapter(ProviderAdapter):
     def send_chat(
         self,
         role_config: RoleModelConfig,
-        messages: List[ChatMessage],
-        tools: Optional[List[ToolDefinition]] = None,
-        response_format: Optional[Any] = None,
-        tool_choice: Optional[str] = None,
+        messages: list[ChatMessage],
+        tools: list[ToolDefinition] | None = None,
+        response_format: Any | None = None,
+        tool_choice: str | None = None,
     ) -> ChatResponse:
         if self.call_count < len(self.responses):
             response = self.responses[self.call_count]
@@ -63,7 +65,7 @@ class TestToolLoopBasicBehavior:
 
         executor_calls = []
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             executor_calls.append((name, args))
             return {}
 
@@ -77,7 +79,7 @@ class TestToolLoopBasicBehavior:
             tool_executor=tool_executor,
         )
 
-        result = runner.run_turn(history=[], user_message="Test")
+        runner.run_turn(history=[], user_message="Test")
 
         assert len(executor_calls) == 0
         assert adapter.call_count == 1
@@ -101,7 +103,7 @@ class TestToolLoopBasicBehavior:
 
         executor_calls = []
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             executor_calls.append((name, args))
             return args["a"] + args["b"]
 
@@ -115,7 +117,7 @@ class TestToolLoopBasicBehavior:
             tool_executor=tool_executor,
         )
 
-        result = runner.run_turn(history=[], user_message="What is 1+2?")
+        runner.run_turn(history=[], user_message="What is 1+2?")
 
         assert len(executor_calls) == 1
         assert executor_calls[0] == ("add", {"a": 1, "b": 2})
@@ -164,7 +166,7 @@ class TestToolLoopMultipleCalls:
 
         call_sequence = []
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             call_sequence.append(name)
             return {"status": "ok"}
 
@@ -211,7 +213,7 @@ class TestToolLoopMultipleCalls:
 
         executed_tools = []
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             executed_tools.append(name)
             return {"result": f"{name}_result"}
 
@@ -227,7 +229,7 @@ class TestToolLoopMultipleCalls:
             tool_executor=tool_executor,
         )
 
-        result = runner.run_turn(history=[], user_message="Run all tools")
+        runner.run_turn(history=[], user_message="Run all tools")
 
         # All three tools should be executed
         assert len(executed_tools) == 3
@@ -254,7 +256,7 @@ class TestToolLoopMaxSteps:
 
         execution_count = 0
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             nonlocal execution_count
             execution_count += 1
             return {"iteration": execution_count}
@@ -269,7 +271,7 @@ class TestToolLoopMaxSteps:
             tool_executor=tool_executor,
         )
 
-        result = runner.run_turn(
+        runner.run_turn(
             history=[],
             user_message="Start loop",
             max_tool_steps=3,
@@ -301,7 +303,7 @@ class TestToolLoopMaxSteps:
 
         execution_count = 0
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             nonlocal execution_count
             execution_count += 1
             return {}
@@ -341,7 +343,7 @@ class TestToolLoopMaxSteps:
 
         execution_count = 0
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             nonlocal execution_count
             execution_count += 1
             return {}
@@ -356,7 +358,7 @@ class TestToolLoopMaxSteps:
             tool_executor=tool_executor,
         )
 
-        result = runner.run_turn(
+        runner.run_turn(
             history=[],
             user_message="Test",
             max_tool_steps=0,
@@ -382,7 +384,7 @@ class TestToolLoopErrorHandling:
         adapter = MockAdapter(responses=[tool_response])
         participant = Participant(name="Test", adapter=adapter, model="test")
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             raise ValueError("Tool execution failed!")
 
         tools = [
@@ -410,7 +412,7 @@ class TestToolLoopErrorHandling:
         adapter = MockAdapter(responses=[tool_response])
         participant = Participant(name="Test", adapter=adapter, model="test")
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             return {}
 
         tools = [
@@ -451,7 +453,7 @@ class TestToolLoopMessageConstruction:
         adapter = MockAdapter(responses=[tool_response, final_response])
         participant = Participant(name="Test", adapter=adapter, model="test")
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             return {"user": "Alice", "age": 30}
 
         tools = [
@@ -464,7 +466,7 @@ class TestToolLoopMessageConstruction:
             tool_executor=tool_executor,
         )
 
-        result = runner.run_turn(history=[], user_message="Get user 123")
+        runner.run_turn(history=[], user_message="Get user 123")
 
         # Inspect the second call to adapter (after tool execution)
         assert adapter.call_count == 2
@@ -500,7 +502,7 @@ class TestToolLoopMessageConstruction:
 
         received_args = None
 
-        def tool_executor(name: str, args: Dict[str, Any]) -> Any:
+        def tool_executor(name: str, args: dict[str, Any]) -> Any:
             nonlocal received_args
             received_args = args
             return {"status": "ok"}
@@ -515,7 +517,7 @@ class TestToolLoopMessageConstruction:
             tool_executor=tool_executor,
         )
 
-        result = runner.run_turn(history=[], user_message="Use complex tool")
+        runner.run_turn(history=[], user_message="Use complex tool")
 
         # Verify complex arguments were passed correctly
         assert received_args is not None
