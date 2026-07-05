@@ -131,7 +131,7 @@ claude_participant = Participant(
 grok_participant = Participant(
     name="Grok",
     adapter=XAIAdapter(api_key="..."),
-    model="grok-3-latest"
+    model="grok-4"
 )
 
 # Google Gemini
