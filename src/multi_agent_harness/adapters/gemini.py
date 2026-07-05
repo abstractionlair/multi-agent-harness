@@ -261,9 +261,9 @@ class GeminiAdapter(ProviderAdapter):
 
         for candidate in response.candidates:
             for part in candidate.content.parts:
-                if hasattr(part, "text"):
-                    text_parts.append(part.text)
-                elif hasattr(part, "function_call"):
+                # Check function_call FIRST — Part is a pydantic model where
+                # .text always exists (defaults to None), so hasattr is useless.
+                if part.function_call is not None:
                     fc = part.function_call
                     tool_calls.append(
                         ToolCall(
@@ -272,6 +272,8 @@ class GeminiAdapter(ProviderAdapter):
                             call_id=fc.name,
                         )
                     )
+                elif part.text is not None:
+                    text_parts.append(part.text)
 
         content = "".join(text_parts)
 

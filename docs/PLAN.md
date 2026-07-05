@@ -211,7 +211,7 @@ docs/
 - [x] Verification scripts (verify_phase2.py, verify_phase3.py)
 - [x] Add dependencies to pyproject.toml
   - Core dependencies: openai>=1.0.0
-  - Optional dependencies: anthropic, google-generativeai
+  - Optional dependencies: anthropic, google-genai
   - Dev dependencies: pytest, mypy, black, ruff, pre-commit, pytest-cov
   - Tool configurations: black, ruff, pytest, coverage
 - [x] Add mypy.ini with strict type checking
