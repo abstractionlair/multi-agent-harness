@@ -167,3 +167,59 @@ class TestGeminiSdkResponseEdgeCases:
         result = GeminiAdapter._convert_sdk_response(response)
         assert result.message.content == ""
         assert len(result.tool_calls) == 0
+
+
+class TestGeminiSdkResponseRealTypes:
+    """Same conversions exercised against the real google.genai types.
+
+    The fakes above mirror the SDK's pydantic semantics as of google-genai
+    2.10; these tests pin the conversion against the actual types so an SDK
+    shape change fails loudly here rather than silently in production.
+    """
+
+    def test_function_call_with_real_types(self) -> None:
+        from google.genai import types as genai_types
+
+        response = genai_types.GenerateContentResponse.model_validate(
+            {
+                "candidates": [
+                    {
+                        "content": {
+                            "role": "model",
+                            "parts": [
+                                {
+                                    "functionCall": {
+                                        "name": "get_weather",
+                                        "args": {"city": "Paris"},
+                                    }
+                                }
+                            ],
+                        }
+                    }
+                ]
+            }
+        )
+        result = GeminiAdapter._convert_sdk_response(response)
+        assert len(result.tool_calls) == 1
+        assert result.tool_calls[0].name == "get_weather"
+        assert result.tool_calls[0].arguments == {"city": "Paris"}
+        assert result.message.content == ""
+
+    def test_text_with_real_types(self) -> None:
+        from google.genai import types as genai_types
+
+        response = genai_types.GenerateContentResponse.model_validate(
+            {
+                "candidates": [
+                    {
+                        "content": {
+                            "role": "model",
+                            "parts": [{"text": "Hello from Gemini"}],
+                        }
+                    }
+                ]
+            }
+        )
+        result = GeminiAdapter._convert_sdk_response(response)
+        assert result.message.content == "Hello from Gemini"
+        assert len(result.tool_calls) == 0
