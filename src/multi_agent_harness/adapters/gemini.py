@@ -1,6 +1,6 @@
 """Google Gemini adapter implementation for the multi-agent harness.
 
-If the google-generativeai SDK is available, uses it; otherwise falls back to REST.
+If the google-genai SDK is available, uses it; otherwise falls back to REST.
 Reads GOOGLE_API_KEY from env or .env for REST fallback.
 """
 
@@ -22,9 +22,9 @@ from .base import (
 from ..config import RoleModelConfig
 
 try:
-    import google.generativeai as genai
+    from google import genai as google_genai
 except ImportError:  # pragma: no cover - optional dependency
-    genai = None
+    google_genai = None
 
 
 class GeminiAdapter(ProviderAdapter):
@@ -32,9 +32,13 @@ class GeminiAdapter(ProviderAdapter):
 
     def __init__(self, api_key: str | None = None, max_retries: int = 2) -> None:
         super().__init__(api_key or os.environ.get("GOOGLE_API_KEY"))
-        if genai and self.api_key:
-            genai.configure(api_key=self.api_key)
+        self._client: Any | None = self._create_client()
         self._max_retries = max(0, max_retries)
+
+    def _create_client(self) -> Any | None:
+        if google_genai is None or not self.api_key:
+            return None
+        return google_genai.Client(api_key=self.api_key)
 
     def send_chat(
         self,
@@ -64,17 +68,15 @@ class GeminiAdapter(ProviderAdapter):
         }
 
         if response_format and response_format.type == "json_schema":
-            # Gemini supports JSON schema in response_mime_type and response_schema
             generation_config["response_mime_type"] = "application/json"
             if response_format.json_schema:
-                # Extract schema from json_schema wrapper if present
                 schema = response_format.json_schema
                 if "schema" in schema:
                     generation_config["response_schema"] = schema["schema"]
                 else:
                     generation_config["response_schema"] = schema
 
-        if genai:
+        if self._client is not None:
             return self._send_with_sdk(
                 model_name=role_config.model,
                 messages=converted_messages,
@@ -102,22 +104,21 @@ class GeminiAdapter(ProviderAdapter):
         tools: list[ToolDefinition] | None,
         generation_config: dict[str, Any],
     ) -> ChatResponse:
-        """Send request using the Google Generative AI SDK."""
-        if genai is None:  # pragma: no cover - guard for typing
-            raise RuntimeError("google-generativeai SDK is not available")
-        model_kwargs: dict[str, Any] = {}
-        if system_instruction:
-            model_kwargs["system_instruction"] = system_instruction
+        """Send request using the google-genai SDK."""
+        if self._client is None:  # pragma: no cover - guard for typing
+            raise RuntimeError("google-genai SDK client is not available")
 
-        model = genai.GenerativeModel(
-            model_name=model_name,
-            **model_kwargs
-        )
-
-        # Convert tools to Gemini format
-        gemini_tools = None
+        # Convert tools to Gemini SDK format
+        sdk_tools = None
         if tools:
-            gemini_tools = [self._convert_tool_to_gemini(tool) for tool in tools]
+            sdk_tools = [self._convert_tool_to_sdk(tool) for tool in tools]
+
+        # Build config dict for the new SDK
+        config: dict[str, Any] = dict(generation_config)
+        if system_instruction:
+            config["system_instruction"] = system_instruction
+        if sdk_tools:
+            config["tools"] = sdk_tools
 
         # Build contents from messages
         contents = [self._message_to_content(msg) for msg in messages]
@@ -125,17 +126,11 @@ class GeminiAdapter(ProviderAdapter):
         last_error: Exception | None = None
         for attempt in range(self._max_retries + 1):
             try:
-                if gemini_tools:
-                    response = model.generate_content(
-                        contents,
-                        tools=gemini_tools,
-                        generation_config=generation_config,
-                    )
-                else:
-                    response = model.generate_content(
-                        contents,
-                        generation_config=generation_config,
-                    )
+                response = self._client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=config,
+                )
                 return self._convert_sdk_response(response)
             except Exception as exc:  # pragma: no cover - requires network
                 last_error = exc
@@ -176,12 +171,11 @@ class GeminiAdapter(ProviderAdapter):
     @staticmethod
     def _convert_message(message: ChatMessage) -> dict[str, Any]:
         """Convert our ChatMessage to Gemini's internal format (before parts conversion)."""
-        # Map our roles to Gemini's roles
         role_map = {
             "user": "user",
             "assistant": "model",
-            "system": "user",  # System messages become user messages
-            "tool": "user",  # Tool results become user messages
+            "system": "user",
+            "tool": "user",
         }
 
         gemini_role = role_map.get(message.role, "user")
@@ -189,7 +183,7 @@ class GeminiAdapter(ProviderAdapter):
         return {
             "role": gemini_role,
             "content": message.content,
-            "original_role": message.role,  # Keep track for special handling
+            "original_role": message.role,
         }
 
     @staticmethod
@@ -197,11 +191,9 @@ class GeminiAdapter(ProviderAdapter):
         """Convert message to Gemini content format with parts."""
         parts: list[dict[str, Any]] = []
 
-        # Handle tool results
         if message.get("original_role") == "tool":
             content = message["content"]
             if isinstance(content, dict) and "tool_call_id" in content:
-                # This is a function response
                 parts.append(
                     {
                         "functionResponse": {
@@ -212,13 +204,10 @@ class GeminiAdapter(ProviderAdapter):
                 )
             else:
                 parts.append({"text": str(content)})
-        # Handle assistant messages with tool calls
         elif message.get("original_role") == "assistant" and isinstance(message["content"], dict):
             content_dict = message["content"]
-            # Add text content if present
             if "content" in content_dict and content_dict["content"]:
                 parts.append({"text": content_dict["content"]})
-            # Add function calls
             if "tool_calls" in content_dict:
                 for tc in content_dict["tool_calls"]:
                     func = tc.get("function", {})
@@ -230,7 +219,6 @@ class GeminiAdapter(ProviderAdapter):
                             }
                         }
                     )
-        # Handle simple text messages
         else:
             content = message["content"]
             if isinstance(content, str):
@@ -244,9 +232,8 @@ class GeminiAdapter(ProviderAdapter):
         }
 
     @staticmethod
-    def _convert_tool_to_gemini(tool: ToolDefinition) -> Any:
-        """Convert ToolDefinition to Gemini SDK format."""
-        # The SDK expects actual genai types, but we'll return dict for compatibility
+    def _convert_tool_to_sdk(tool: ToolDefinition) -> dict[str, Any]:
+        """Convert ToolDefinition to google-genai SDK format."""
         return {
             "function_declarations": [
                 {
@@ -272,7 +259,6 @@ class GeminiAdapter(ProviderAdapter):
         text_parts: list[str] = []
         tool_calls: list[ToolCall] = []
 
-        # Process response parts
         for candidate in response.candidates:
             for part in candidate.content.parts:
                 if hasattr(part, "text"):
@@ -283,7 +269,7 @@ class GeminiAdapter(ProviderAdapter):
                         ToolCall(
                             name=fc.name,
                             arguments=dict(fc.args),
-                            call_id=fc.name,  # Gemini doesn't provide separate IDs
+                            call_id=fc.name,
                         )
                     )
 
@@ -340,7 +326,6 @@ class GeminiAdapter(ProviderAdapter):
         if not api_key:
             raise RuntimeError("GOOGLE_API_KEY not set (and .env missing)")
 
-        # Gemini REST API endpoint
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
 
         data = _json.dumps(body).encode("utf-8")

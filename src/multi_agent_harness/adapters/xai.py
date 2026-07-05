@@ -199,7 +199,7 @@ class XAIAdapter(ProviderAdapter):
         import urllib.error
 
         attempted: list[str] = []
-        models = [body.get("model"), "grok-beta"]
+        models = [body.get("model"), "grok-3-latest"]
         last_err: Exception | None = None
         for m in models:
             if not m or m in attempted:

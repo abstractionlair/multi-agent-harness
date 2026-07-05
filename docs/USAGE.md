@@ -27,7 +27,7 @@ pip install openai>=1.0.0
 pip install anthropic>=0.18.0
 
 # For Google Gemini
-pip install google-generativeai>=0.3.0
+pip install google-genai>=1.0.0
 
 # For xAI (uses OpenAI-compatible API)
 # No additional dependencies needed
@@ -131,7 +131,7 @@ claude_participant = Participant(
 grok_participant = Participant(
     name="Grok",
     adapter=XAIAdapter(api_key="..."),
-    model="grok-beta"
+    model="grok-3-latest"
 )
 
 # Google Gemini
