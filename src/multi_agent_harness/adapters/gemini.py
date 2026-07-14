@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Iterable, Sequence
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from .base import (
     ChatMessage,
@@ -21,10 +21,13 @@ from .base import (
 )
 from ..config import RoleModelConfig
 
-try:
+if TYPE_CHECKING:
     from google import genai as google_genai
-except ImportError:  # pragma: no cover - optional dependency
-    google_genai = None
+else:
+    try:
+        from google import genai as google_genai
+    except ImportError:  # pragma: no cover - optional dependency
+        google_genai = None
 
 
 class GeminiAdapter(ProviderAdapter):
