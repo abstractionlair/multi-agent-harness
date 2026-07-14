@@ -3,6 +3,14 @@
 Status: Experimental (extracted from GTD test harness)  
 Goal: A reusable Python library for wiring multiple LLM roles into structured conversations with tools, plus model‑as‑judge evaluation.
 
+> **Status banner (2026‑07‑14):** CI (lint, type check, unit tests, integration
+> tests) is green on Python 3.10–3.12. Built and covered by tests: the
+> core turn/tool‑call loop, the conversation runner, the OpenAI adapter, and
+> Gemini SDK response parsing. Exploratory and not exercised by any test:
+> the Anthropic and xAI adapters, the engine layer (`AssistantEngine` and
+> the judge/interrogator engines), and everything under `examples/` —
+> treat those as scaffolding, not verified behavior.
+
 ## What This Is
 
 A small, provider‑agnostic harness that lets you:

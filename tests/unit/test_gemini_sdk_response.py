@@ -8,6 +8,8 @@ is always True and the function_call branch was dead code.
 
 from __future__ import annotations
 
+import pytest
+
 from multi_agent_harness.adapters.gemini import GeminiAdapter
 
 
@@ -175,9 +177,14 @@ class TestGeminiSdkResponseRealTypes:
     The fakes above mirror the SDK's pydantic semantics as of google-genai
     2.10; these tests pin the conversion against the actual types so an SDK
     shape change fails loudly here rather than silently in production.
+
+    google-genai is an optional dependency (see the `google`/`all` extras in
+    pyproject.toml) and is not installed by the base `dev` extra that CI
+    uses, so these tests are skipped unless it's present.
     """
 
     def test_function_call_with_real_types(self) -> None:
+        pytest.importorskip("google.genai")
         from google.genai import types as genai_types
 
         response = genai_types.GenerateContentResponse.model_validate(
@@ -206,6 +213,7 @@ class TestGeminiSdkResponseRealTypes:
         assert result.message.content == ""
 
     def test_text_with_real_types(self) -> None:
+        pytest.importorskip("google.genai")
         from google.genai import types as genai_types
 
         response = genai_types.GenerateContentResponse.model_validate(

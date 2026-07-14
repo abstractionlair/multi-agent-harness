@@ -9,6 +9,7 @@ from ..adapters.base import (
     ChatMessage,
     ChatResponse,
     ResponseFormat,
+    ToolCall,
     ToolDefinition,
     ToolExecutor,
 )
