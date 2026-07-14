@@ -5,11 +5,18 @@ Goal: A reusable Python library for wiring multiple LLM roles into structured co
 
 > **Status banner (2026‑07‑14):** CI (lint, type check, unit tests, integration
 > tests) is green on Python 3.10–3.12. Built and covered by tests: the
-> core turn/tool‑call loop, the conversation runner, the OpenAI adapter, and
-> Gemini SDK response parsing. Exploratory and not exercised by any test:
-> the Anthropic and xAI adapters, the engine layer (`AssistantEngine` and
-> the judge/interrogator engines), and everything under `examples/` —
-> treat those as scaffolding, not verified behavior.
+> core turn/tool‑call loop, the conversation runner, the OpenAI adapter's
+> payload/response conversion (message/tool conversion, `supports_tools`,
+> `provider_name` — not `send_chat`, the underlying client, or retry
+> behavior), and Gemini SDK response parsing. Exploratory and not exercised
+> by any test: the `AssistantEngine`, the public `TranscriptAnalyzer` (used
+> for judge/interrogator roles — exported from the package, no pytest
+> coverage) and the judge/interrogator scripts under `examples/`, and
+> everything else under `examples/` — treat those as scaffolding, not
+> verified behavior. The Anthropic and xAI adapters are untested too, but
+> note they're eagerly imported by `adapters/__init__.py`, so they're
+> load‑bearing for package import even though their request/response
+> behavior is unverified.
 
 ## What This Is
 
